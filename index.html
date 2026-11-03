@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="description" content="Simulador de viabilidad financiera para licitaciones del SECOP II en Colombia. Validador de requisitos habilitantes, indicadores RUP y consorcios." />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador viabilidad para Licitaciones SECOP II | Colombia</title>
+<meta name="description" content="Calcula liquidez, endeudamiento y capital de trabajo, indexa experiencia a SMMLV, simula consorcios y busca procesos del SECOP II por código UNSPSC. Gratis y en tu navegador.">
+<meta name="author" content="App-Financiero">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#1e3a8a">
+<!-- Reemplaza TU-DOMINIO por tu dirección real al publicar -->
+<link rel="canonical" href="https://licicop.vercel.app//">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://licicop.vercel.app//">
+<meta property="og:title" content="Simulador vialibilidad para Licitaciones SECOP II">
+<meta property="og:description" content="Evalúa tus indicadores habilitantes, indexa experiencia a SMMLV y simula consorcios.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Simulador viabilidad para Licitaciones SECOP II">
+<meta name="twitter:description" content="Indicadores habilitantes, experiencia en SMMLV y consorcios para contratación estatal en Colombia.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"App-Financiero",
+"description":"Herramienta gratuita para calcular indicadores financieros habilitantes, indexar experiencia a SMMLV y simular consorcios en contratación estatal colombiana.",
+"applicationCategory":"BusinessApplication","operatingSystem":"All","inLanguage":"es-CO",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"COP"},
+"featureList":["Índices de liquidez, endeudamiento y cobertura de intereses","Indexación de contratos a SMMLV","Ponderación de indicadores para consorcios y uniones temporales","Búsqueda de procesos SECOP II por código UNSPSC","Reporte descargable en PDF"]}
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+  body{font-family:'Inter',system-ui,sans-serif}
+  .card{@apply bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200}
+  .inp{@apply w-full p-2 border border-slate-300 rounded bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none}
+  .lbl{@apply block text-sm font-medium text-slate-700}
+  .btn{@apply font-semibold py-2 px-4 rounded-lg text-sm text-white disabled:opacity-60}
+  h2{@apply text-lg font-bold text-slate-800 mb-1}
+  .ayuda{@apply text-xs text-slate-600 mb-3}
+</style>
+
+<meta name="google-site-verification" content="DMbJ0ZOt0hMecxaTOtzVYSR0fYHP5HjwWxW9-SKMalY" />
+
+</head>
+<body class="bg-slate-50 text-slate-800 p-4 md:p-8">
+<main class="max-w-5xl mx-auto space-y-6">
+
+  <header class="text-center space-y-1">
+    <h1 class="text-3xl font-bold text-blue-900">📊 Licitcop-App-Financiero</h1>
+    <p class="text-slate-600">Validador de requisitos habilitantes, experiencia en SMMLV y consorcios para licitaciones en Colombia</p>
+    <p class="text-xs text-slate-500">Tus datos se procesan en tu navegador. Solo la búsqueda SECOP consulta datos.gov.co.</p>
+    <div class="flex justify-center gap-2 pt-2">
+      <button type="button" id="btn-ejemplo" class="btn bg-slate-600 hover:bg-slate-700">Cargar ejemplo</button>
+      <button type="button" id="btn-limpiar" class="btn bg-slate-400 hover:bg-slate-500">Limpiar todo</button>
+    </div>
+  </header>
+
+  <div id="errores" role="alert" class="hidden bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg p-4"></div>
+
+  <section class="card border-l-4 border-l-blue-700">
+    <h2>Perfil del proponente y del proceso</h2>
+    <p class="ayuda">Define qué se evalúa y qué documentos necesitas.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="lbl">Tipo de proponente<select id="tipo_prop" class="inp sv mt-1">
+        <option value="juridica">Persona jurídica</option>
+        <option value="natural_obl">Persona natural obligada a llevar contabilidad</option>
+        <option value="natural_no">Persona natural no obligada a llevar contabilidad</option></select></label>
+      <label class="lbl">Modalidad de selección<select id="modalidad" class="inp sv mt-1"></select></label>
+    </div>
+    <label class="flex items-center gap-2 text-sm mt-3"><input type="checkbox" id="es_obra"> El contrato es de obra (aplica capacidad residual)</label>
+    <div id="info_perfil" class="mt-3 text-sm bg-blue-50 border border-blue-100 rounded-lg p-3" aria-live="polite"></div>
+    <p class="text-sm font-semibold mt-4 mb-1">Lista de verificación de documentos</p>
+    <div id="checklist" class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-sm"></div>
+  </section>
+
+  <section class="card">
+    <h2>1. Identificación del reporte</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <label class="lbl">Razón social<input id="razon_social" class="inp sv mt-1" placeholder="Constructora ABC S.A.S"></label>
+      <label class="lbl">NIT<input id="nit" class="inp sv mt-1" placeholder="900.123.456-7"></label>
+      <label class="lbl">Proceso SECOP II<input id="num_proceso" class="inp sv mt-1" placeholder="LP-SENA-001"></label>
+      <label class="lbl">Logo (opcional)<input type="file" id="logo_upload" accept="image/*" class="mt-1 w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700"></label>
+    </div>
+    <p class="ayuda mt-3">Tratamiento de datos (Ley 1581 de 2012): la información que digitas, incluido NIT o cédula, se procesa solo en tu navegador y no se envía a ningún servidor. Evita compartir el archivo PDF con terceros no autorizados.</p>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class="card bg-blue-50 border-blue-100">
+      <h2 class="text-blue-900">2. Datos financieros (RUP)</h2>
+      <p class="ayuda">Toma los valores de tu RUP o estados financieros. Puedes escribir la utilidad operacional en negativo si hubo pérdida.</p>
+      <p id="nota_fin" class="ayuda font-semibold text-blue-800"></p>
+      <div id="campos_fin" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </section>
+    <section class="card bg-amber-50 border-amber-100">
+      <h2 class="text-amber-900">3. Requisitos del pliego</h2>
+      <p class="ayuda">Digita lo que exige el proceso al que quieres presentarte.</p>
+      <div id="campos_req" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      <div class="mt-4 pt-3 border-t border-amber-200"><p class="text-sm font-semibold mb-2">Calcular mínimos desde el presupuesto oficial (opcional)</p>
+        <div class="grid grid-cols-3 gap-2"><input type="number" id="pres_oficial" class="inp sv" placeholder="Presupuesto $" aria-label="Presupuesto oficial en pesos"><input type="number" id="pct_ct" class="inp sv" placeholder="Cap. trabajo %" aria-label="Porcentaje de capital de trabajo"><input type="number" id="pct_pat" class="inp sv" placeholder="Patrimonio %" aria-label="Porcentaje de patrimonio"></div>
+        <button type="button" id="btn-calc-min" class="btn bg-amber-700 hover:bg-amber-800 mt-2">Calcular mínimos</button></div>
+      <div id="bloque_obra" class="hidden mt-4 pt-3 border-t border-amber-200"><label class="lbl">Capacidad residual calculada ($), según la Guía de Colombia Compra Eficiente<input type="number" id="cap_res" class="inp sv mt-1"></label></div>
+    </section>
+  </div>
+
+  <section class="card bg-emerald-50 border-emerald-100">
+    <h2 class="text-emerald-900">4. Experiencia indexada a SMMLV</h2>
+    <p class="ayuda">Agrega cada contrato con el año y su valor en pesos. Verifica en el Manual de la CCE qué fecha de SMMLV aplica (normalmente la de terminación del contrato).</p>
+    <div id="contratos" class="space-y-2"></div>
+    <div class="flex flex-wrap items-end gap-3 mt-3">
+      <button type="button" id="btn-add-contrato" class="btn bg-emerald-700 hover:bg-emerald-800">+ Agregar contrato</button>
+      <label class="lbl">Experiencia exigida (SMMLV)<input type="number" id="req_exp" min="0" step="any" class="inp sv mt-1 w-44" placeholder="Ej. 1500"></label>
+      <label class="lbl">Mínimo de contratos<input type="number" id="req_ncont" min="0" class="inp sv mt-1 w-36" placeholder="Ej. 2"></label>
+      <label class="lbl">Códigos UNSPSC exigidos<input id="req_unspsc" class="inp sv mt-1 w-56 font-mono" placeholder="8010, 80101500"></label>
+    </div>
+  </section>
+
+  <section class="card bg-violet-50 border-violet-100">
+    <label class="flex items-center gap-2 font-bold text-violet-900"><input type="checkbox" id="chk_cons" class="w-4 h-4"> 5. Participo en consorcio o unión temporal</label>
+    <div id="bloque_cons" class="hidden mt-3">
+      <p class="ayuda">Los indicadores se ponderan por el % de participación de cada integrante. Confirma en el pliego el método exacto antes de presentar tu oferta.</p>
+      <label class="lbl w-48">Mi participación (%)<input type="number" id="mi_part" min="0" max="100" step="any" class="inp sv mt-1" placeholder="60"></label>
+      <p class="text-sm font-semibold text-violet-900 mt-4 mb-2">Otros integrantes</p>
+      <div id="miembros" class="space-y-3"></div>
+      <button type="button" id="btn-add-miembro" class="btn bg-violet-700 hover:bg-violet-800 mt-3">+ Agregar integrante</button>
+    </div>
+  </section>
+
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="chk_anexo" checked> Incluir anexo de revisión para contador o abogado</label>
+  <button type="button" id="btn-reporte" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-md text-lg">🔍 Calcular y generar reporte</button>
+
+  <div id="contenedor_reporte" class="hidden">
+    <div class="flex justify-end mb-3">
+      <button type="button" id="btn_pdf" class="btn bg-red-600 hover:bg-red-700">Descargar reporte PDF</button>
+    </div>
+    <div id="reporte_pdf" class="bg-white p-8 rounded-xl shadow border border-slate-200"></div>
+  </div>
+
+  <section class="card border-t-4 border-t-emerald-600">
+    <h2>6. Rastreador de procesos SECOP II</h2>
+    <p class="ayuda">Hasta 15 códigos UNSPSC de 4, 6 u 8 dígitos, separados por coma. Se compara cada proceso con tus datos (sección 2) y requisitos (sección 3). Es una estimación: los requisitos reales están en el pliego de cada proceso.</p>
+    <label class="lbl">Códigos UNSPSC<input id="codigos_productos" class="inp sv mt-1 font-mono" placeholder="80101500, 3011, 11111500"></label>
+    <button type="button" id="btn-buscar" class="w-full mt-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-lg disabled:opacity-60">Buscar procesos y evaluar compatibilidad</button>
+    <p id="estado" class="text-xs text-slate-600 mt-2" aria-live="polite"></p>
+    <div id="ofertas" class="space-y-3 mt-3 max-h-[520px] overflow-y-auto" aria-live="polite"></div>
+    <button type="button" id="btn-mas" class="hidden btn bg-slate-600 hover:bg-slate-700 mt-3">Cargar más</button>
+  </section>
+
+  <section class="card text-sm text-slate-700 space-y-2">
+    <h2>Preguntas frecuentes</h2>
+    <details><summary class="font-semibold cursor-pointer">¿Qué indicadores calcula?</summary><p class="mt-1">Liquidez (activo corriente / pasivo corriente), endeudamiento (pasivo total / activo total), cobertura de intereses (utilidad operacional / gastos de intereses), capital de trabajo y patrimonio.</p></details>
+    <details><summary class="font-semibold cursor-pointer">¿Cómo se indexa la experiencia?</summary><p class="mt-1">Se divide el valor del contrato entre el SMMLV del año correspondiente y se multiplica por tu porcentaje de participación.</p></details>
+    <details><summary class="font-semibold cursor-pointer">¿El reporte tiene validez oficial?</summary><p class="mt-1">No. Es una simulación informativa. Verifica siempre contra tu RUP, el pliego y la normativa vigente (Decreto 1082 de 2015 y Manual de Requisitos Habilitantes de Colombia Compra Eficiente).</p></details>
+  </section>
+</main>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COP = v => new Intl.NumberFormat('es-CO', {style:'currency', currency:'COP', maximumFractionDigits:0}).format(v);
+const r2 = n => Math.round(n * 100) / 100;
+const num = v => { const s = String(v ?? '').trim(); return s === '' ? NaN : Number(s); };
+
+// SMMLV por año (verifica el valor vigente en MinTrabajo). Para agregar un año nuevo, añade una línea aquí.
+const SMMLV = {2010:515000,2011:535600,2012:566700,2013:589500,2014:616000,2015:644350,2016:689455,2017:737717,
+  2018:781242,2019:828116,2020:877803,2021:908526,2022:1000000,2023:1160000,2024:1300000,2025:1423500,2026:1750905};
+const F = [['ac','Activo corriente ($)'],['pc','Pasivo corriente ($)'],['at','Activo total ($)'],['pt','Pasivo total ($)'],
+  ['pat','Patrimonio ($)'],['util','Utilidad operacional ($)'],['gastos','Gastos de intereses ($, 0 si no tienes)']];
+const REQ = [['req_liq','Índice de liquidez (≥)','1.5'],['req_end','Endeudamiento (≤ %)','50'],['req_cob','Cobertura de intereses (≥)','2'],
+  ['req_cap','Capital de trabajo ($ ≥)','100000000'],['req_pat','Patrimonio mínimo ($ ≥)','200000000'],
+  ['req_roe','Rentabilidad del patrimonio (≥ %)','5'],['req_roa','Rentabilidad del activo (≥ %)','3']];
+const EJEMPLO = {ac:250000000,pc:100000000,at:500000000,pt:180000000,pat:320000000,util:60000000,gastos:5000000,
+  req_liq:1.5,req_end:50,req_cob:2,req_cap:100000000,req_pat:200000000,req_roe:5,req_roa:3};
+
+/* ---------- Construcción de campos ---------- */
+const campo = (id, l, ph = '') => `<label class="lbl">${l}<input type="number" step="any" inputmode="decimal" id="${id}" class="inp sv mt-1" placeholder="${ph}"></label>`;
+$('campos_fin').innerHTML = F.map(([k, l]) => campo(k, l)).join('');
+$('campos_req').innerHTML = REQ.map(([k, l, ph]) => campo(k, l, 'Ej. ' + ph)).join('');
+
+/* ---------- Perfil: tipos, modalidades y documentos ---------- */
+const TIPOS = {juridica:'Persona jurídica', natural_obl:'Persona natural obligada a llevar contabilidad', natural_no:'Persona natural no obligada a llevar contabilidad'};
+const MOD = {
+  licitacion: {n:'Licitación pública', rup:1, fin:1, crit:'Ponderación de factores técnicos y económicos según el pliego.'},
+  abreviada: {n:'Selección abreviada de menor cuantía', rup:1, fin:1, crit:'Según el pliego; puede incluir manifestación de interés y limitación a Mipymes.'},
+  subasta: {n:'Subasta inversa (bienes y servicios de características técnicas uniformes)', rup:1, fin:1, crit:'Se adjudica por menor precio mediante lances, después de la habilitación.'},
+  concurso: {n:'Concurso de méritos', rup:1, fin:1, crit:'Se califica experiencia y equipo de trabajo, no el precio.'},
+  minima: {n:'Mínima cuantía', rup:0, fin:0, crit:'Menor precio. Exceptuada del RUP: los requisitos se acreditan con los documentos que pida la invitación.'},
+  directa: {n:'Contratación directa o régimen especial', rup:0, fin:0, crit:'La entidad define qué documentos exige; normalmente no se pide RUP.'}
+};
+const modKey = t => { t = (t || '').toLowerCase(); return /m[ií]nima/.test(t) ? 'minima' : /subasta/.test(t) ? 'subasta' : /licitaci/.test(t) ? 'licitacion'
+  : /concurso/.test(t) ? 'concurso' : /directa|r[eé]gimen especial/.test(t) ? 'directa' : /abreviada|menor cuant/.test(t) ? 'abreviada' : null; };
+$('modalidad').innerHTML = Object.entries(MOD).map(([k, m]) => `<option value="${k}">${m.n}</option>`).join('');
+
+function docsPara(tipo, mk, cons, obra) {
+  const m = MOD[mk], d = [];
+  d.push(tipo === 'juridica' ? 'Certificado de existencia y representación legal vigente y cédula del representante legal' : 'Copia de la cédula de ciudadanía');
+  if (tipo === 'natural_obl') d.push('Matrícula mercantil vigente', 'Estados financieros a 31 de diciembre del último año fiscal, firmados por el contador y con notas');
+  if (tipo === 'natural_no') d.push('Certificación de no estar obligado a llevar contabilidad e indicadores de capacidad financiera y organizacional, firmada por contador', 'Copia de la tarjeta profesional y antecedentes del contador');
+  if (tipo === 'juridica' && m.fin) d.push('Estados financieros a 31 de diciembre del último año fiscal, firmados por representante legal y contador (o revisor fiscal)');
+  if (m.rup) d.push('Certificado del RUP vigente y en firme');
+  d.push('RUT actualizado', 'Antecedentes fiscales, disciplinarios, judiciales y medidas correctivas', 'Certificación de pago de seguridad social y parafiscales',
+    'Declaración de no estar incurso en inhabilidades ni incompatibilidades', 'Certificados de experiencia o contratos (si el pliego no la verifica por RUP)');
+  if (cons) d.push('Documento de conformación del consorcio o unión temporal (porcentajes y representante)');
+  if (obra) d.push('Soporte del cálculo de capacidad residual');
+  d.push('Garantía de seriedad de la oferta (si el pliego la exige)');
+  return d;
+}
+function actualizarPerfil() {
+  if (!MOD[$('modalidad').value]) $('modalidad').selectedIndex = 0;
+  if (!TIPOS[$('tipo_prop').value]) $('tipo_prop').selectedIndex = 0;
+  const t = $('tipo_prop').value, mk = $('modalidad').value, m = MOD[mk], obra = $('es_obra').checked;
+  $('info_perfil').innerHTML = `<b>${esc(m.n)}.</b> ${esc(m.crit)}<br>RUP: <b>${m.rup ? 'exigible' : 'no exigible'}</b> · Indicadores financieros y organizacionales: <b>${m.fin ? 'se verifican como requisito habilitante' : 'solo como referencia (confirma en la invitación)'}</b>.`;
+  $('nota_fin').textContent = t === 'natural_no' ? 'Persona natural no obligada: digita los valores de la certificación de indicadores firmada por tu contador.'
+    : t === 'natural_obl' ? 'Usa los estados financieros a 31 de diciembre del último año fiscal.' : '';
+  $('bloque_obra').classList.toggle('hidden', !obra);
+  const prev = new Set([...document.querySelectorAll('.ck:checked')].map(c => c.nextElementSibling.textContent));
+  $('checklist').innerHTML = docsPara(t, mk, $('chk_cons').checked, obra).map(x =>
+    `<label class="flex gap-2 items-start"><input type="checkbox" class="ck mt-1"${prev.has(x) ? ' checked' : ''}> <span>${esc(x)}</span></label>`).join('');
+}
+['tipo_prop', 'modalidad', 'es_obra', 'chk_cons'].forEach(id => $(id).addEventListener('change', actualizarPerfil));
+$('btn-calc-min').addEventListener('click', () => {
+  const p = num($('pres_oficial').value), a = num($('pct_ct').value), b = num($('pct_pat').value);
+  if (!(p > 0)) { alert('Digita el presupuesto oficial.'); return; }
+  if (a >= 0) $('req_cap').value = Math.round(p * a / 100);
+  if (b >= 0) $('req_pat').value = Math.round(p * b / 100);
+  guardar();
+});
+
+/* ---------- Persistencia local ---------- */
+const KEY = 'appfinanciero_v2';
+const guardar = () => { try { const o = {}; document.querySelectorAll('.sv').forEach(i => o[i.id] = i.value); localStorage.setItem(KEY, JSON.stringify(o)); } catch {} };
+const cargar = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in o) if ($(k)) $(k).value = o[k]; } catch {} };
+document.addEventListener('input', e => { if (e.target.classList.contains('sv')) guardar(); });
+cargar();
+actualizarPerfil();
+
+/* ---------- Filas dinámicas (contratos e integrantes) ---------- */
+const anios = Object.keys(SMMLV).sort((a, b) => b - a);
+function addContrato() {
+  $('contratos').insertAdjacentHTML('beforeend', `<div class="fila grid grid-cols-2 md:grid-cols-[1fr_1.3fr_5rem_8rem_auto] gap-2 items-center">
+    <select class="inp c-anio" aria-label="Año del contrato"><option value="">Año…</option>${anios.map(a => `<option>${a}</option>`).join('')}</select>
+    <input type="number" step="any" min="0" class="inp c-val" placeholder="Valor ejecutado ($)" aria-label="Valor del contrato">
+    <input type="number" step="any" min="0" max="100" class="inp c-pct" value="100" aria-label="% de participación">
+    <input class="inp c-cod font-mono" placeholder="UNSPSC" aria-label="Código UNSPSC del contrato">
+    <button type="button" data-del class="px-2 text-red-600 font-bold" aria-label="Quitar contrato">✕</button></div>`);
+}
+function addMiembro() {
+  const n = $('miembros').children.length + 2;
+  $('miembros').insertAdjacentHTML('beforeend', `<div class="fila border border-violet-200 rounded-lg p-3 bg-white space-y-2">
+    <div class="flex gap-2"><input class="inp m-n" placeholder="Integrante ${n}" aria-label="Nombre del integrante">
+    <input type="number" step="any" min="0" max="100" class="inp m-p w-28" placeholder="% part." aria-label="% de participación">
+    <button type="button" data-del class="px-2 text-red-600 font-bold" aria-label="Quitar integrante">✕</button></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">${F.map(([k, l]) => `<input type="number" step="any" class="inp m-${k}" placeholder="${l.split(' (')[0]}" aria-label="${l}">`).join('')}</div></div>`);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) b.closest('.fila').remove(); });
+$('btn-add-contrato').addEventListener('click', addContrato);
+$('btn-add-miembro').addEventListener('click', addMiembro);
+$('chk_cons').addEventListener('change', e => { $('bloque_cons').classList.toggle('hidden', !e.target.checked); if (e.target.checked && !$('miembros').children.length) addMiembro(); });
+
+$('btn-ejemplo').addEventListener('click', () => { for (const k in EJEMPLO) $(k).value = EJEMPLO[k]; guardar(); });
+$('btn-limpiar').addEventListener('click', () => {
+  document.querySelectorAll('.sv').forEach(i => i.tagName === 'SELECT' ? (i.selectedIndex = 0) : (i.value = ''));
+  $('contratos').innerHTML = ''; $('miembros').innerHTML = ''; $('chk_cons').checked = false; $('bloque_cons').classList.add('hidden');
+  $('contenedor_reporte').classList.add('hidden'); $('errores').classList.add('hidden');
+  try { localStorage.removeItem(KEY); } catch {}
+  actualizarPerfil();
+});
+
+/* ---------- Logo (redimensionado para no inflar el PDF) ---------- */
+let logo = '';
+$('logo_upload').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { const img = new Image(); img.onload = () => {
+    const s = Math.min(1, 300 / img.width), c = document.createElement('canvas');
+    c.width = img.width * s; c.height = img.height * s; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    logo = c.toDataURL('image/png'); }; img.src = rd.result; };
+  rd.readAsDataURL(f);
+});
+
+/* ---------- Cálculos (funciones puras) ---------- */
+function leerFin(get, etq, err) {
+  const d = {};
+  F.forEach(([k, l]) => {
+    let v = num(get(k)); if (k === 'gastos' && isNaN(v)) v = 0;
+    if (isNaN(v) || (v < 0 && k !== 'util')) err.push(`${etq}: completa «${l}» con un valor válido.`);
+    d[k] = v;
+  });
+  if (d.at <= 0) err.push(`${etq}: el activo total debe ser mayor que 0.`);
+  return d;
+}
+function leerReq(err, estricto = true) {
+  const q = {};
+  ['liq', 'end', 'cob', 'cap', 'pat', 'roe', 'roa'].forEach((k, i) => {
+    const v = num($(REQ[i][0]).value);
+    if (estricto && (isNaN(v) || v < 0)) err.push(`Requisitos: completa «${REQ[i][1]}».`);
+    q[k] = v;
+  });
+  return q;
+}
+const indicadores = d => ({ liq: d.pc > 0 ? d.ac / d.pc : Infinity, end: d.pt / d.at * 100,
+  cob: d.gastos > 0 ? d.util / d.gastos : Infinity, ct: d.ac - d.pc, pat: d.pat,
+  roe: d.pat > 0 ? d.util / d.pat * 100 : -Infinity, roa: d.util / d.at * 100 });
+const fx = v => v === Infinity ? 'Indeterminado' : v === -Infinity ? 'No calculable' : r2(v).toFixed(2);
+const pcs = v => fx(v) + (Math.abs(v) === Infinity ? '' : '%');
+const ge = (v, x) => v === Infinity || r2(v) >= x;
+const ex = (x, f) => isNaN(x) ? '—' : f(x);
+function evaluar(i, q) {
+  return [
+    ['Índice de liquidez', 'Activo corriente / Pasivo corriente', fx(i.liq), ex(q.liq, x => '≥ ' + x.toFixed(2)), ge(i.liq, q.liq)],
+    ['Índice de endeudamiento', 'Pasivo total / Activo total', pcs(i.end), ex(q.end, x => '≤ ' + x + '%'), r2(i.end) <= q.end],
+    ['Cobertura de intereses', 'Utilidad operacional / Gastos de intereses', fx(i.cob), ex(q.cob, x => '≥ ' + x.toFixed(2)), ge(i.cob, q.cob)],
+    ['Capital de trabajo', 'Activo corriente − Pasivo corriente', COP(i.ct), ex(q.cap, x => '≥ ' + COP(x)), i.ct >= q.cap],
+    ['Patrimonio', 'Patrimonio neto', COP(i.pat), ex(q.pat, x => '≥ ' + COP(x)), i.pat >= q.pat],
+    ['Rentabilidad del patrimonio (capacidad organizacional)', 'Utilidad operacional / Patrimonio', pcs(i.roe), ex(q.roe, x => '≥ ' + x + '%'), ge(i.roe, q.roe)],
+    ['Rentabilidad del activo (capacidad organizacional)', 'Utilidad operacional / Activo total', pcs(i.roa), ex(q.roa, x => '≥ ' + x + '%'), ge(i.roa, q.roa)]];
+}
+function ponderar(miembros) {
+  const o = {liq:0, end:0, cob:0, ct:0, pat:0, roe:0, roa:0};
+  for (const m of miembros) {
+    const k = m.p / 100; if (k <= 0) continue; const i = indicadores(m.d);
+    for (const x of ['liq', 'end', 'cob', 'roe', 'roa']) o[x] += Math.abs(i[x]) === Infinity ? i[x] : i[x] * k;
+    o.ct += i.ct * k; o.pat += i.pat * k;
+  }
+  return o;
+}
+const item = ([n, f, o, x, ok], ref) => `<div style="break-inside:avoid" class="flex justify-between items-center gap-3 p-3 rounded-lg border mb-2">
+  <div><p class="font-bold text-slate-800">${esc(n)}</p><p class="text-xs text-slate-500">${esc(f)}</p>
+  <p class="text-sm mt-1">Obtenido: <b>${esc(o)}</b> | Exigido: <b>${esc(x)}</b></p></div>
+  <span class="shrink-0 px-3 py-1 rounded text-xs font-black border ${ref ? 'bg-slate-50 text-slate-700 border-slate-200' : ok ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}">${ref ? 'ℹ️ REFERENCIA' : ok ? '✅ CUMPLE' : '❌ NO CUMPLE'}</span></div>`;
+const tabla = (filas) => `<table class="w-full text-xs border mb-2"><tbody>${filas.map((r, i) => `<tr class="border-b ${i % 2 ? 'bg-slate-50' : ''}">${r.map((c, j) => `<td class="p-1.5 ${j ? 'text-right font-semibold' : 'text-slate-600'}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+/* ---------- Reporte y anexo de revisión ---------- */
+const NORMAS = {verificado: '27/10/2026', base: 'Ley 80 de 1993, Ley 1150 de 2007, Decreto 1082 de 2015, Manual de Requisitos Habilitantes y guías de Colombia Compra Eficiente'};
+const FORMULAS = [
+  ['Liquidez', 'Activo corriente / Pasivo corriente. Si el pasivo corriente es 0: indeterminado (se considera cumplido).'],
+  ['Endeudamiento', '(Pasivo total / Activo total) × 100'],
+  ['Cobertura de intereses', 'Utilidad operacional / Gastos de intereses. Si los gastos son 0: indeterminado (se considera cumplido).'],
+  ['Capital de trabajo', 'Activo corriente − Pasivo corriente'],
+  ['Patrimonio', 'Valor digitado del patrimonio'],
+  ['Rentabilidad del patrimonio', '(Utilidad operacional / Patrimonio) × 100. Si el patrimonio no es positivo: no calculable.'],
+  ['Rentabilidad del activo', '(Utilidad operacional / Activo total) × 100'],
+  ['Experiencia en SMMLV', 'Valor del contrato / SMMLV del año × % de participación. Solo cuentan contratos que coinciden con los códigos UNSPSC exigidos.'],
+  ['Consorcio o unión temporal', 'Suma de (indicador de cada integrante × su % de participación). Capital de trabajo y patrimonio se ponderan igual.']];
+const VALIDAR = [
+  'Fecha del SMMLV aplicable (año del contrato, fecha de terminación u otra que exija el pliego o el Manual).',
+  'Valores del SMMLV por año (2026: $1.750.905, Decreto 1469 de 2025).',
+  'Tratamiento de denominadores en cero (indeterminado = cumple).',
+  'Fórmulas y umbrales de capacidad organizacional frente al Manual vigente.',
+  'Método de ponderación de indicadores en consorcios y uniones temporales según el pliego.',
+  'Si el concurso de méritos, la mínima cuantía y la contratación directa exigen o no indicadores financieros en este proceso.',
+  'Capacidad residual: la herramienta solo compara el valor digitado con el presupuesto; el cálculo sigue la Guía de Colombia Compra Eficiente.',
+  'Vigencia normativa: reforma a la Ley 80 en trámite y proyecto de modificación del decreto único reglamentario.',
+  'Lista de documentos: confirmar contra el pliego o la invitación del proceso.'];
+const H = (t, mt = 'mt-6') => `<h4 class="text-base font-bold text-blue-900 border-l-4 border-blue-700 pl-3 ${mt} mb-3" style="break-inside:avoid">${t}</h4>`;
+const anexo = () => `<div style="page-break-before:always;break-before:page">${H('Anexo: hoja de revisión para contador o abogado', 'mt-0')}
+  <p class="text-xs text-slate-600 mb-3">Datos normativos verificados el ${NORMAS.verificado}. Base: ${esc(NORMAS.base)}.</p>
+  <table class="w-full text-xs border">${FORMULAS.map(([a, b], i) => `<tr class="border-b ${i % 2 ? 'bg-slate-50' : ''}" style="break-inside:avoid"><td class="p-1.5 font-semibold w-1/3 align-top">${esc(a)}</td><td class="p-1.5">${esc(b)}</td></tr>`).join('')}</table>
+  <p class="font-bold text-sm mt-4 mb-2">Puntos a validar</p>${VALIDAR.map(x => `<p class="text-xs mb-1" style="break-inside:avoid">☐ ${esc(x)}</p>`).join('')}
+  <div class="mt-8 grid grid-cols-2 gap-6 text-xs" style="break-inside:avoid"><div class="border-t border-slate-500 pt-1">Nombre y tarjeta profesional del revisor</div><div class="border-t border-slate-500 pt-1">Firma y fecha</div></div></div>`;
+
+function generarReporte() {
+  const err = [], avisos = [], tipo = $('tipo_prop').value, mk = $('modalidad').value, M = MOD[mk] || MOD.licitacion;
+  const obra = $('es_obra').checked, ref = !M.fin;
+  const q = leerReq(err, M.fin);
+  const usaFin = M.fin || F.some(([k]) => $(k).value !== '');
+  const e = usaFin ? leerFin(k => $(k).value, 'Tu empresa', err) : null;
+  if (e && !err.length && Math.abs(e.at - e.pt - e.pat) > 1) avisos.push('Activo total − Pasivo total no coincide con el patrimonio digitado. Revisa tus cifras.');
+  const cr = num($('cap_res').value), pres = num($('pres_oficial').value);
+  if (obra && M.fin && isNaN(cr)) err.push('Obra: digita la capacidad residual calculada.');
+
+  const reqCod = $('req_unspsc').value.split(',').map(c => c.replace(/\D/g, '')).filter(Boolean);
+  const contratos = [];
+  document.querySelectorAll('#contratos .fila').forEach((f, i) => {
+    const a = f.querySelector('.c-anio').value, v = num(f.querySelector('.c-val').value), p = num(f.querySelector('.c-pct').value), cod = f.querySelector('.c-cod').value.replace(/\D/g, '');
+    if (!a && isNaN(v)) return;
+    if (!a || isNaN(v) || v <= 0 || isNaN(p) || p < 0 || p > 100) { err.push(`Contrato ${i + 1}: completa año, valor y participación (0-100).`); return; }
+    contratos.push({a, v, p, cod, s: v / SMMLV[a] * p / 100, ok: !reqCod.length || reqCod.some(r => cod.startsWith(r))});
+  });
+
+  let miembros = null;
+  if ($('chk_cons').checked) {
+    const mp = num($('mi_part').value);
+    if (isNaN(mp) || mp <= 0 || mp > 100) err.push('Consorcio: indica tu porcentaje de participación.');
+    miembros = [{n: $('razon_social').value || 'Tu empresa', p: mp, d: e}];
+    document.querySelectorAll('#miembros .fila').forEach((f, i) => {
+      const ee = [], p = num(f.querySelector('.m-p').value);
+      const d = usaFin ? leerFin(k => f.querySelector('.m-' + k).value, `Integrante ${i + 2}`, ee) : null;
+      if (isNaN(p) || p <= 0 || p > 100) ee.push(`Integrante ${i + 2}: indica su participación.`);
+      err.push(...ee); miembros.push({n: f.querySelector('.m-n').value || `Integrante ${i + 2}`, p, d});
+    });
+    const suma = miembros.reduce((s, m) => s + (m.p || 0), 0);
+    if (!err.length && Math.abs(suma - 100) > 0.01) err.push(`Consorcio: las participaciones suman ${suma}%, deben sumar 100%.`);
+  }
+
+  const box = $('errores');
+  if (err.length) { box.innerHTML = '<b>Corrige antes de continuar:</b><ul class="list-disc pl-5 mt-1">' + err.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>'; box.classList.remove('hidden'); box.scrollIntoView({behavior:'smooth'}); return; }
+  box.classList.add('hidden');
+
+  const res = e ? evaluar(indicadores(e), q) : [], okN = res.filter(x => x[4]).length;
+  const banner = !res.length ? ['#e0f2fe', '#075985', 'ℹ️ Sin indicadores financieros: en esta modalidad no son requisito habilitante por RUP.']
+    : ref ? ['#e0f2fe', '#075985', 'ℹ️ Indicadores solo de referencia: en esta modalidad el RUP no es exigible. Confirma en la invitación.']
+    : okN === res.length ? ['#dcfce7', '#166534', `✅ Cumples los ${res.length} indicadores evaluados`]
+    : ['#fee2e2', '#991b1b', `❌ No cumples ${res.length - okN} de ${res.length} indicadores evaluados`];
+
+  let h = `<div style="background:#1e3a8a;color:#fff" class="rounded-lg p-5 flex justify-between items-center gap-4 mb-4"><div>
+    <p class="text-xs" style="color:#bfdbfe">Reporte de capacidad financiera y requisitos habilitantes</p>
+    <h3 class="text-2xl font-black uppercase">${esc($('razon_social').value) || 'Empresa no especificada'}</h3>
+    <p class="text-sm mt-1" style="color:#dbeafe">NIT o C.C.: ${esc($('nit').value) || 'No especificado'} · Proceso: <b>${esc($('num_proceso').value) || 'No especificado'}</b></p>
+    <p class="text-xs mt-1" style="color:#bfdbfe">${esc(TIPOS[tipo])} · ${esc(M.n)}</p></div>
+    ${logo ? `<img src="${logo}" class="h-14 object-contain bg-white rounded p-1" alt="Logo">` : ''}</div>
+    <div style="break-inside:avoid;background:${banner[0]};color:${banner[1]}" class="rounded-lg p-3 text-center font-bold mb-2">${banner[2]}</div>
+    <p class="text-xs text-slate-600 mb-3">${esc(M.crit)}</p>`;
+
+  if (res.length) h += H('Diagnóstico de capacidad financiera y organizacional', 'mt-4') + res.map(x => item(x, ref)).join('')
+    + `<div style="break-inside:avoid"><p class="font-bold text-sm mt-4 mb-1">Datos utilizados</p>${tabla(F.map(([k, l]) => [l.split(' (')[0], COP(e[k])]))}
+    ${tabla([['Liquidez exigida', ex(q.liq, x => '≥ ' + x)], ['Endeudamiento exigido', ex(q.end, x => '≤ ' + x + '%')], ['Cobertura exigida', ex(q.cob, x => '≥ ' + x)],
+      ['Capital de trabajo exigido', ex(q.cap, COP)], ['Patrimonio exigido', ex(q.pat, COP)], ['Rentabilidad del patrimonio exigida', ex(q.roe, x => '≥ ' + x + '%')], ['Rentabilidad del activo exigida', ex(q.roa, x => '≥ ' + x + '%')]])}</div>`;
+
+  if (obra) h += H('Capacidad residual (obra)') + item(['Capacidad residual', 'Valor calculado con la Guía de Colombia Compra Eficiente (digitado)', isNaN(cr) ? 'No digitada' : COP(cr),
+    isNaN(pres) ? 'Presupuesto no digitado' : '≥ ' + COP(pres), !isNaN(cr) && !isNaN(pres) && cr >= pres], false);
+
+  if (contratos.length) {
+    const cuentan = contratos.filter(c => c.ok), tot = cuentan.reduce((s, c) => s + c.s, 0), exig = num($('req_exp').value), nc = num($('req_ncont').value);
+    h += H('Experiencia indexada (SMMLV)') + `<table class="w-full text-xs border mb-2" style="break-inside:avoid"><thead class="bg-slate-50"><tr><th class="p-1.5 text-left">Año</th><th class="p-1.5 text-right">Valor</th><th class="p-1.5 text-right">SMMLV del año</th><th class="p-1.5 text-right">Part.</th><th class="p-1.5 text-right">UNSPSC</th><th class="p-1.5 text-right">Cuenta</th><th class="p-1.5 text-right">En SMMLV</th></tr></thead><tbody>
+      ${contratos.map(c => `<tr class="border-t"><td class="p-1.5">${c.a}</td><td class="p-1.5 text-right">${COP(c.v)}</td><td class="p-1.5 text-right">${COP(SMMLV[c.a])}</td><td class="p-1.5 text-right">${c.p}%</td><td class="p-1.5 text-right">${esc(c.cod) || '—'}</td><td class="p-1.5 text-right">${c.ok ? 'Sí' : 'No'}</td><td class="p-1.5 text-right font-semibold">${c.s.toFixed(2)}</td></tr>`).join('')}
+      </tbody></table>`
+      + item(['Experiencia total acreditada', 'Suma de contratos que cumplen el código: valor / SMMLV × participación', tot.toFixed(2) + ' SMMLV', exig > 0 ? '≥ ' + exig + ' SMMLV' : 'No indicada', !(exig > 0) || r2(tot) >= exig], false)
+      + (nc > 0 ? item(['Número de contratos', 'Contratos que cumplen el código exigido', String(cuentan.length), '≥ ' + nc, cuentan.length >= nc], false) : '');
+  }
+
+  if (miembros) {
+    h += H('Consorcio o unión temporal (ponderado)') + tabla(miembros.map(m => [m.n, m.p + '%']));
+    if (e) h += evaluar(ponderar(miembros), q).map(x => item(x, ref)).join('')
+      + '<p class="text-xs text-slate-500">Cada indicador se pondera por el % de participación. Si algún integrante tiene un indicador indeterminado, el resultado ponderado también lo es: confirma el tratamiento con la entidad.</p>';
+  }
+
+  const marc = new Set([...document.querySelectorAll('.ck:checked')].map(c => c.nextElementSibling.textContent));
+  h += H('Lista de verificación de documentos') + docsPara(tipo, mk, !!miembros, obra).map(x => `<p class="text-xs mb-1" style="break-inside:avoid">${marc.has(x) ? '☑' : '☐'} ${esc(x)}</p>`).join('');
+  if (avisos.length) h += `<div class="mt-4 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">⚠️ ${avisos.map(esc).join('<br>')}</div>`;
+  h += `<div class="mt-6 pt-3 border-t text-xs text-slate-500 text-justify" style="break-inside:avoid">
+    <p><b>Aviso:</b> simulación informativa, sin validez oficial. Verifica los resultados contra tu RUP, el pliego de condiciones y la normativa vigente, y hazlos revisar por un contador o abogado antes de presentar una oferta.</p>
+    <p class="mt-1">Generado con App-Financiero, diseñado por Andres Leonardo NS, el ${new Date().toLocaleString('es-CO')}.</p></div>`;
+  if ($('chk_anexo').checked) h += anexo();
+
+  $('reporte_pdf').innerHTML = h;
+  $('contenedor_reporte').classList.remove('hidden');
+  $('contenedor_reporte').scrollIntoView({behavior:'smooth'});
+}
+$('btn-reporte').addEventListener('click', generarReporte);
+
+async function descargarPDF() {
+  const b = $('btn_pdf');
+  if (typeof html2pdf === 'undefined') { alert('No se pudo cargar la librería de PDF. Revisa tu conexión.'); return; }
+  const txt = b.textContent; b.disabled = true; b.textContent = 'Generando PDF…';
+  const nombre = `Reporte_${($('num_proceso').value || 'SECOP').replace(/[^\w-]+/g, '_')}.pdf`;
+  try {
+    const blob = await html2pdf().set({ margin: [12, 10, 16, 10], image: {type:'jpeg', quality:0.95},
+      html2canvas: {scale:2, useCORS:true, backgroundColor:'#fff', scrollY:0, windowWidth:1024},
+      jsPDF: {unit:'mm', format:'a4', orientation:'portrait'}, pagebreak: {mode:['css','avoid-all']} })
+      .from($('reporte_pdf')).toPdf().get('pdf').then(pdf => {
+        const n = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= n; i++) { pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(120); pdf.text(`Página ${i} de ${n}`, 105, 291, {align:'center'}); }
+      }).outputPdf('blob');
+    let dl = null; try { dl = await window.claude?.use('downloads'); } catch {}
+    if (dl) await dl.save({filename: nombre, data: blob});
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); }
+  } catch (e) { if (e?.code !== 'declined') alert('No se pudo generar el PDF: ' + (e.message || e)); }
+  finally { b.disabled = false; b.textContent = txt; }
+}
+$('btn_pdf').addEventListener('click', descargarPDF);
+
+
+
+
+/* ---------- Rastreador SECOP II ---------- */
+const API = 'https://www.datos.gov.co/resource/p6dx-8zbt.json';
+const LIMITE = 25;
+let offset = 0, ctrl = null;
+
+function tarjeta(p, ok) {
+  const mk = modKey(p.modalidad_de_contratacion), m = mk ? MOD[mk] : null;
+  const link = p.urlproceso?.url || '', seguro = /^https:\/\//.test(link);
+  const badge = m && !m.rup ? ['bg-sky-100 text-sky-800', 'ℹ️ Sin RUP: revisa los documentos de la invitación']
+    : ok === null ? ['bg-slate-100 text-slate-700', 'Completa tus datos para evaluar']
+    : ok ? ['bg-green-100 text-green-800', '🟢 Compatible con tus requisitos'] : ['bg-red-100 text-red-800', '🔴 No cumples tus requisitos'];
+  return `<div class="p-4 rounded-lg border bg-white ${m && !m.rup ? 'border-sky-200' : ok === false ? 'border-red-200' : ok ? 'border-green-200' : 'border-slate-200'}">
+    <div class="flex flex-wrap justify-between gap-2 mb-2">
+      <span class="text-xs text-slate-600">${esc(p.modalidad_de_contratacion || 'Contratación')} · <span class="font-mono">${esc(p.codigo_principal_de_categoria || '')}</span></span>
+      <span class="px-2 py-0.5 text-xs font-bold rounded-full ${badge[0]}">${badge[1]}</span></div>
+    <h4 class="font-bold text-sm">${esc(p.entidad || 'Entidad no registrada')}</h4>
+    <p class="text-xs text-slate-600 mt-1 mb-2">${esc(p.descripci_n_del_procedimiento || p.nombre_del_procedimiento || 'Sin descripción')}</p>
+    ${m ? `<p class="text-xs text-slate-500 mb-2">${esc(m.crit)}</p>` : ''}
+    <div class="flex justify-between items-center border-t pt-2"><span class="text-emerald-700 font-bold text-sm">${COP(parseFloat(p.precio_base) || 0)}</span>
+    ${seguro ? `<a href="${esc(link)}" target="_blank" rel="noopener" class="text-xs text-blue-700 underline">Ver expediente</a>` : ''}</div></div>`;
+}
+
+async function buscar(mas) {
+  const btn = $('btn-buscar'), box = $('ofertas'), est = $('estado');
+  const codigos = [...new Set($('codigos_productos').value.split(',').map(c => c.replace(/\D/g, '')).filter(c => [4, 6, 8].includes(c.length)))].slice(0, 15);
+  if (!codigos.length) { est.textContent = 'Ingresa al menos un código UNSPSC de 4, 6 u 8 dígitos.'; return; }
+  if (!mas) { offset = 0; box.innerHTML = ''; $('btn-mas').classList.add('hidden'); }
+
+  // ¿Podemos evaluar compatibilidad? Solo si los datos y requisitos están completos.
+  const e1 = [], q = leerReq(e1), d = leerFin(k => $(k).value, '', e1);
+  const ind = e1.length ? null : indicadores(d);
+  const compatible = () => ind ? evaluar(ind, q).every(x => x[4]) : null;
+
+  ctrl?.abort(); const mio = ctrl = new AbortController();
+  const t = setTimeout(() => mio.abort(), 20000);
+  btn.disabled = true; est.textContent = 'Consultando SECOP II…';
+  const where = codigos.map(c => `codigo_principal_de_categoria like 'V1.${c}%' OR codigo_principal_de_categoria like '${c}%'`).join(' OR ');
+  const params = new URLSearchParams({'$where': `estado_del_procedimiento='Publicado' AND (${where})`,
+    '$order': 'fecha_de_publicacion_del DESC', '$limit': LIMITE, '$offset': offset});
+  try {
+    const r = await fetch(`${API}?${params}`, {signal: mio.signal});
+    if (!r.ok) throw new Error(`HTTP ${r.status}. Revisa en la consola (F12) el detalle; puede que cambie el nombre de alguna columna del dataset.`);
+    const datos = await r.json();
+    if (!Array.isArray(datos)) throw new Error('Respuesta inesperada del servidor.');
+    const ok = compatible();
+    box.insertAdjacentHTML('beforeend', datos.map(p => tarjeta(p, ok)).join(''));
+    offset += datos.length;
+    $('btn-mas').classList.toggle('hidden', datos.length < LIMITE);
+    est.textContent = offset ? `${offset} procesos mostrados.` : 'No hay procesos publicados para esos códigos.';
+    if (ok === null && offset) est.textContent += ' Completa las secciones 2 y 3 para evaluar compatibilidad.';
+  } catch (err) {
+    if (mio !== ctrl) return;
+    est.textContent = '⚠️ ' + (err.name === 'AbortError' ? 'La consulta tardó demasiado. Intenta de nuevo.'
+      : err instanceof TypeError ? 'No se pudo conectar con datos.gov.co. Si estás en la versión publicada en claude.ai, esa conexión está bloqueada por seguridad: descarga index.html y ábrelo en tu computador (VS Code o doble clic) para usar el buscador.'
+      : err.message);
+  } finally {
+    clearTimeout(t);
+    if (mio === ctrl) { btn.disabled = false; btn.textContent = 'Buscar procesos y evaluar compatibilidad'; }
+  }
+}
+$('btn-buscar').addEventListener('click', () => buscar(false));
+$('btn-mas').addEventListener('click', () => buscar(true));
+</script>
+</body>
+</html>
